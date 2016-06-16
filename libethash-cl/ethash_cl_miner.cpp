@@ -64,6 +64,8 @@
 #undef min
 #undef max
 
+#define	MAX_OCL_BIN_SIZE							(1 << 20)
+
 using namespace std;
 
 unsigned const ethash_cl_miner::c_defaultLocalWorkSize = 64;
@@ -411,18 +413,42 @@ bool ethash_cl_miner::init(
 		// into a byte array by bin2h.cmake. There is no need to load the file by hand in runtime
 		string code(ETHASH_CL_MINER_KERNEL, ETHASH_CL_MINER_KERNEL + ETHASH_CL_MINER_KERNEL_SIZE);
 		addDefinition(code, "GROUP_SIZE", s_workgroupSize);
-		addDefinition(code, "DAG_SIZE", dagSize128);
-		addDefinition(code, "LIGHT_SIZE", lightSize64);
+		//addDefinition(code, "DAG_SIZE", dagSize128);
+		//addDefinition(code, "LIGHT_SIZE", lightSize64);
 		addDefinition(code, "ACCESSES", ETHASH_ACCESSES);
 		addDefinition(code, "MAX_OUTPUTS", c_maxSearchResults);
 		addDefinition(code, "PLATFORM", platformId);
 		addDefinition(code, "COMPUTE", computeCapability);
 
-		// create miner OpenCL program
-		cl::Program::Sources sources;
-		sources.push_back({ code.c_str(), code.size() });
-
-		cl::Program program(m_context, sources);
+		char binbuffer[MAX_OCL_BIN_SIZE];
+		//std::string binfile();
+		
+		ifstream readbin("ethash-Hawaii.bin", std::ifstream::in | std::ifstream::binary);
+		cl::Program::Binaries binobj;
+		
+		if(readbin.is_open())
+		{
+			readbin.read(binbuffer, MAX_OCL_BIN_SIZE);
+			
+			ETHCL_LOG("Reading file: " << "ethash-Hawaii.bin" << " - " << readbin.gcount() << " bytes.");
+			//ETHCL_LOG(binfile);
+			
+			// create miner OpenCL program
+			//cl::Program::Sources sources;
+			//sources.push_back({ code.c_str(), code.size() });
+			
+			
+			binobj.push_back({ binbuffer, readbin.gcount()});
+			readbin.close();
+		}
+		else
+		{
+			ETHCL_LOG("Unable to open " << "ethash-Hawaii.bin" << ". Error: " << strerror(errno));
+			return false;
+		}
+						
+		//cl::Program program(m_context, sources);
+		cl::Program program(m_context, std::vector<cl::Device>(1, device), binobj);
 		try
 		{
 			program.build({ device }, options);
@@ -459,7 +485,8 @@ bool ethash_cl_miner::init(
 
 		m_searchKernel.setArg(1, m_header);
 		m_searchKernel.setArg(2, m_dag);
-		m_searchKernel.setArg(5, ~0u);
+		m_searchKernel.setArg(3, dagSize128);
+		m_searchKernel.setArg(6, ~0u);
 
 		// create mining buffers
 		for (unsigned i = 0; i != c_bufferCount; ++i)
@@ -479,7 +506,8 @@ bool ethash_cl_miner::init(
 
 		m_dagKernel.setArg(1, m_light);
 		m_dagKernel.setArg(2, m_dag);
-		m_dagKernel.setArg(3, ~0u);
+		m_dagKernel.setArg(3, lightSize64);
+		m_dagKernel.setArg(4, ~0u);
 
 		for (uint32_t i = 0; i < fullRuns; i++)
 		{
@@ -527,16 +555,20 @@ void ethash_cl_miner::search(uint8_t const* header, uint64_t target, search_hook
 			m_queue.finish();
 
 		// pass these to stop the compiler unrolling the loops
-		m_searchKernel.setArg(4, target);
+		m_searchKernel.setArg(5, target);
 		
 		unsigned buf = 0;
 		random_device engine;
 		uint64_t start_nonce = uniform_int_distribution<uint64_t>()(engine);
+		
+		// To tell which path of the hash failed by the nonce
+		start_nonce &= 0xFFFFFFFFFFFFFFF0ULL;
+		
 		for (;; start_nonce += m_globalWorkSize)
 		{
 			// supply output buffer to kernel
 			m_searchKernel.setArg(0, m_searchBuffer[buf]);
-			m_searchKernel.setArg(3, start_nonce);
+			m_searchKernel.setArg(4, start_nonce);
 
 			// execute it!
 			m_queue.enqueueNDRangeKernel(m_searchKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
