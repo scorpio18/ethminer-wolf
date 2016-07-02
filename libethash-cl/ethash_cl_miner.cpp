@@ -423,7 +423,14 @@ bool ethash_cl_miner::init(
 		char binbuffer[MAX_OCL_BIN_SIZE];
 		//std::string binfile();
 		
-		ifstream readbin("ethash-Hawaii.bin", std::ifstream::in | std::ifstream::binary);
+		ifstream readbin;
+		if(!strcmp(device.getInfo<CL_DEVICE_NAME>().c_str(), "Hawaii"))
+			readbin.open("ethash-Hawaii.bin", std::ifstream::in | std::ifstream::binary);
+		else if(!strcmp(device.getInfo<CL_DEVICE_NAME>().c_str(), "Tahiti"))
+			readbin.open("ethash-Tahiti.bin", std::ifstream::in | std::ifstream::binary);
+		else
+			readbin.open("ethash-Fiji.bin", std::ifstream::in | std::ifstream::binary);
+		
 		cl::Program::Binaries binobj;
 		
 		if(readbin.is_open())

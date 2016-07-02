@@ -71,7 +71,8 @@ public:
 protected:
 	virtual bool found(uint64_t const* _nonces, uint32_t _count) override
 	{
-//		dev::operator <<(std::cerr << "Found nonces: ", vector<uint64_t>(_nonces, _nonces + _count)) << std::endl;
+		//dev::operator <<(std::cerr << "Found nonces: ", vector<uint64_t>(_nonces, _nonces + _count)) << std::endl;
+		
 		for (uint32_t i = 0; i < _count; ++i)
 			if (m_owner->report(_nonces[i]))
 				return (m_aborted = true);
@@ -125,6 +126,10 @@ bool EthashGPUMiner::report(uint64_t _nonce)
 	EthashProofOfWork::Result r = EthashAux::eval(work().seedHash, work().headerHash, n);
 	if (r.value < work().boundary)
 		return submitProof(Solution{n, r.mixHash});
+	
+	cnote << "Failed on nonce " << n.hex();
+	//abort();
+	
 	return false;
 }
 
