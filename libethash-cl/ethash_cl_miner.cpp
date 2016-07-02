@@ -421,15 +421,19 @@ bool ethash_cl_miner::init(
 		addDefinition(code, "COMPUTE", computeCapability);
 
 		char binbuffer[MAX_OCL_BIN_SIZE];
-		//std::string binfile();
+		std::string filename;
 		
 		ifstream readbin;
 		if(!strcmp(device.getInfo<CL_DEVICE_NAME>().c_str(), "Hawaii"))
-			readbin.open("ethash-Hawaii.bin", std::ifstream::in | std::ifstream::binary);
+			filename = "ethash-Hawaii.bin";
 		else if(!strcmp(device.getInfo<CL_DEVICE_NAME>().c_str(), "Tahiti"))
-			readbin.open("ethash-Tahiti.bin", std::ifstream::in | std::ifstream::binary);
+			filename = "ethash-Tahiti.bin";
+		else if(!strcmp(device.getInfo<CL_DEVICE_NAME>().c_str(), "Tonga"))
+			filename = "ethash-Tonga.bin";
 		else
-			readbin.open("ethash-Fiji.bin", std::ifstream::in | std::ifstream::binary);
+			filename = "ethash-Fiji.bin";
+		
+		readbin.open(filename.c_str(), std::ifstream::in | std::ifstream::binary);
 		
 		cl::Program::Binaries binobj;
 		
@@ -437,7 +441,7 @@ bool ethash_cl_miner::init(
 		{
 			readbin.read(binbuffer, MAX_OCL_BIN_SIZE);
 			
-			ETHCL_LOG("Reading file: " << "ethash-Hawaii.bin" << " - " << readbin.gcount() << " bytes.");
+			ETHCL_LOG("Reading file: " << filename.c_str() << " - " << readbin.gcount() << " bytes.");
 			//ETHCL_LOG(binfile);
 			
 			// create miner OpenCL program
@@ -450,7 +454,7 @@ bool ethash_cl_miner::init(
 		}
 		else
 		{
-			ETHCL_LOG("Unable to open " << "ethash-Hawaii.bin" << ". Error: " << strerror(errno));
+			ETHCL_LOG("Unable to open " << filename.c_str() << ". Error: " << strerror(errno));
 			return false;
 		}
 						
