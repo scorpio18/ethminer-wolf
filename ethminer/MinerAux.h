@@ -877,7 +877,7 @@ private:
 
 					try
 					{
-						prpc->eth_submitHashrate(toJS((u256)rate), "0x" + id.hex());
+						prpc->ele_submitHashrate(toJS((u256)rate), "0x" + id.hex());
 					}
 					catch (jsonrpc::JsonRpcException const& _e)
 					{
@@ -885,7 +885,7 @@ private:
 						cwarn << boost::diagnostic_information(_e);
 					}
 
-					Json::Value v = prpc->eth_getWork();
+					Json::Value v = prpc->ele_getWork();
 					h256 hh(v[0].asString());
 					h256 newSeedHash(v[1].asString());
 
@@ -908,7 +908,7 @@ private:
 				cnote << "  Nonce:" << solution.nonce.hex();
 				if (EthashAux::eval(current.seedHash, current.headerHash, solution.nonce).value < current.boundary)
 				{
-					bool ok = prpc->eth_submitWork("0x" + toString(solution.nonce), "0x" + toString(current.headerHash), "0x" + toString(solution.mixHash));
+					bool ok = prpc->ele_submitWork("0x" + toString(solution.nonce), "0x" + toString(current.headerHash), "0x" + toString(solution.mixHash));
 					if (ok) {
 						cnote << "B-) Submitted and accepted.";
 						f.acceptedSolution(false);
@@ -920,7 +920,7 @@ private:
 				}
 				else if (EthashAux::eval(previous.seedHash, previous.headerHash, solution.nonce).value < previous.boundary)
 				{
-					bool ok = prpc->eth_submitWork("0x" + toString(solution.nonce), "0x" + toString(previous.headerHash), "0x" + toString(solution.mixHash));
+					bool ok = prpc->ele_submitWork("0x" + toString(solution.nonce), "0x" + toString(previous.headerHash), "0x" + toString(solution.mixHash));
 					if (ok) {
 						cnote << "B-) Submitted and accepted.";
 						f.acceptedSolution(true);
